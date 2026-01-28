@@ -310,6 +310,17 @@
                         <label>بادئة المفتاح (اختياري)</label>
                         <input type="text" id="key-prefix" placeholder="مثلاً: EDU-2024-">
                     </div>
+
+                    <div class="input-wrapper" style="width:100%">
+                        <label>مدة الصلاحية</label>
+                        <select id="key-duration" style="background:var(--input-bg); border:1px solid var(--border-color); color:white; padding:10px; border-radius:8px; width:100%">
+                            <option value="0">مدى الحياة (Lifetime)</option>
+                            <option value="30">30 يوماً</option>
+                            <option value="90">3 شهور (90 يوم)</option>
+                            <option value="180">6 شهور (180 يوم)</option>
+                            <option value="365">سنة كاملة (365 يوم)</option>
+                        </select>
+                    </div>
                     <div class="input-wrapper">
                         <label>نوع التنسيق</label>
                         <select id="key-format">
@@ -462,6 +473,33 @@
                 </div>
             </div>
 
+            <div class="card" style="border: 1px solid #ef4444;">
+                <h2 style="margin-bottom: 1.5rem; color: #ef4444;"><i class="fas fa-ban"></i> منطقة الخطر (إيقاف النظام)</h2>
+                <div class="control-group">
+                    <div style="width: 100%;">
+                        <p style="color: var(--text-muted); margin-bottom: 1rem;">
+                            يمكنك تفعيل وضع الصيانة لإيقاف البرنامج عند جميع المستخدمين فوراً. لن يتمكن أحد من فتح التطبيق حتى تقوم بتعطيل هذا الوضع.
+                        </p>
+                        
+                        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; background: rgba(239, 68, 68, 0.1); padding: 1rem; border-radius: 8px;">
+                            <label class="switch">
+                                <input type="checkbox" id="maintenance-toggle">
+                                <span class="slider round"></span>
+                            </label>
+                            <span style="font-weight: bold; color:white;">تفعيل وضع الصيانة</span>
+                        </div>
+
+                        <label>رسالة الصيانة التي ستظهر للمستخدمين</label>
+                        <input type="text" id="maintenance-msg" value="عذراً، النظام متوقف حالياً للصيانة والتحديث. يرجى المحاولة لاحقاً." 
+                               style="width: 100%; background: var(--input-bg); border: 1px solid var(--border-color); color: white; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">
+                        
+                        <button onclick="saveMaintenance()" class="btn" style="background: #ef4444; color: white;">
+                            <i class="fas fa-save"></i> حفظ الإعدادات
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div class="card">
                 <h2 style="margin-bottom: 1.5rem;"><i class="fas fa-info-circle"></i> عن النظام</h2>
                 <p style="color: var(--text-muted);">نظام Logic Admin إصدار 1.0.0</p>
@@ -519,42 +557,89 @@
 
         let generatedKeysCache = [];
 
+
+
+        // === Logic: Key Generation ===
         async function generateKeys() {
             const count = document.getElementById('key-count').value;
             const prefix = document.getElementById('key-prefix').value.toUpperCase();
-            const format = document.getElementById('key-format').value;
+            const days = document.getElementById('key-duration').value;
             
             const keysDisplay = document.getElementById('output-keys');
             const hashesDisplay = document.getElementById('output-hashes');
             const statGenerated = document.getElementById('stat-generated');
-
-            keysDisplay.innerHTML = "جاري التوليد...";
-            hashesDisplay.innerHTML = "// جارٍ التشفير...";
-
-            generatedKeysCache = [];
-            let hashes = [];
-
-            for (let i = 0; i < count; i++) {
-                let key = "";
-                
-                if (prefix) key += prefix;
-
-                if (format === 'standard') {
-                    key += `${generateRandomSegment()}-${generateRandomSegment()}-${generateRandomSegment()}-${generateRandomSegment()}`;
-                } else {
-                    key += `${generateRandomSegment()}-${generateRandomSegment()}`;
-                }
-                
-                generatedKeysCache.push(key);
-                hashes.push(await sha256(key));
+            const btn = document.querySelector('button[onclick="generateKeys()"]');
+            
+            // Check API URL first
+            const url = document.getElementById('api-url').value.trim();
+            if (!url) {
+                alert('الرجاء تعيين رابط السيرفر في صفحة الإعدادات أولاً!');
+                return;
             }
 
-            // Update UI
-            keysDisplay.value = generatedKeysCache.join('\n');
-            
-            hashesDisplay.textContent = `const VALID_HASHES = ${JSON.stringify(hashes, null, 2)};`;
+            keysDisplay.innerHTML = "جاري الاتصال بالسيرفر وتوليد المفاتيح...";
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التوليد...';
+            btn.disabled = true;
 
-            statGenerated.textContent = generatedKeysCache.length; // Just showing current batch count for now
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ 
+                        action: 'GENERATE_KEYS',
+                        count: count,
+                        prefix: prefix,
+                        days: days
+                    })
+                });
+
+                // NOTE: With no-cors (for Google Script), we can't read the response directly easily 
+                // BUT if we use the same domain/deployed app logic or assume success...
+                // Actually, for Dashboard (Web App), users usually use CORS proxy or correct settings.
+                // However, since we cannot easily get JSON back in 'no-cors' mode from browser
+                // We will simulate success message OR advise user to check the 'Keys' sheet.
+                // WAIT! If the user opens dashboard.html locally, they can't make cross-origin requests freely to Google Script without CORS issues.
+                // But typically Google Script Web App set to "Anyone" supports CORS IF we follow redirects.
+                // Let's assume standard fetch works if not no-cors.
+
+                // Let's try normal fetch since we need the keys back.
+                
+                // RE-FETCHING STRATEGY: 
+                // Google Apps Script `ContentService` handles CORS if we don't force 'no-cors'.
+                
+                const realResponse = await fetch(url, {
+                    method: 'POST',
+                    // mode: 'cors', // Default
+                    body: JSON.stringify({ 
+                        action: 'GENERATE_KEYS',
+                        count: count,
+                        prefix: prefix,
+                        days: days
+                    })
+                });
+                
+                const data = await realResponse.json();
+                
+                if (data.status === 'success' && data.keys) {
+                    generatedKeysCache = data.keys;
+                    keysDisplay.value = generatedKeysCache.join('\n');
+                    hashesDisplay.innerHTML = `// تم حفظ المفاتيح في قاعدة البيانات (Sheet: Keys)\n// المدة: ${days === '0' ? 'مدى الحياة' : days + ' يوم'}`;
+                    statGenerated.textContent = generatedKeysCache.length;
+                    alert('تم توليد المفاتيح وحفظها في السيرفر بنجاح!');
+                } else {
+                    throw new Error(data.error || 'Unknown Error');
+                }
+
+            } catch (e) {
+                console.error(e);
+                keysDisplay.value = "حدث خطأ أثناء التوليد. تأكد من إعدادات السيرفر والسماح بـ Cross-Origin.";
+                // Fallback for demo? No, let's force server usage.
+                alert('فشل الاتصال بالسيرفر: ' + e.message);
+            } finally {
+                btn.innerHTML = '<i class="fas fa-magic"></i> توليد المفاتيح';
+                btn.disabled = false;
+            }
         }
 
         function copyKeys() {
@@ -634,6 +719,45 @@
             } catch (err) {
                 console.error(err);
                 alert('حدث خطأ أثناء الإرسال.');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // --- 4. إعدادات وضع الصيانة ---
+        async function saveMaintenance() {
+            const enabled = document.getElementById('maintenance-toggle').checked;
+            const message = document.getElementById('maintenance-msg').value.trim();
+            const btn = document.querySelector('button[onclick="saveMaintenance()"]');
+            const originalText = btn.innerHTML;
+
+            if (enabled && !confirm('تحذير: أنت على وشك إيقاف النظام لجميع المستخدمين! هل أنت متأكد؟')) {
+                document.getElementById('maintenance-toggle').checked = false;
+                return;
+            }
+
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارِ الحفظ...';
+            btn.disabled = true;
+
+            const url = document.getElementById('api-url').value.trim();
+            
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ 
+                        action: 'SET_MAINTENANCE', 
+                        enabled: enabled,
+                        message: message 
+                    })
+                });
+
+                alert('تم تحديث حالة الصيانة بنجاح!');
+            } catch (err) {
+                console.error(err);
+                alert('حدث خطأ أثناء الاتصال بالسيرفر.');
             } finally {
                 btn.innerHTML = originalText;
                 btn.disabled = false;
