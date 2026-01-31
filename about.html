@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم المدير | Logic Simulator Pro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --secondary: #ec4899;
+            --bg-dark: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 280px;
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(10px);
+            border-left: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            right: 0;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 3rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-item {
+            padding: 1rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            margin-right: 280px; /* Width of sidebar */
+            padding: 3rem;
+        }
+
+        .header {
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(to left, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 2rem;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+
+        .input-wrapper {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 12px;
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: 0.3s;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #4f46e5;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: #475569;
+            color: white;
+        }
+
+        /* Results Area */
+        .results-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        .terminal {
+            background: #000;
+            padding: 1.5rem;
+            border-radius: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            color: #4ade80;
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #333;
+        }
+
+        .code-block {
+            background: #1e293b;
+            padding: 1.5rem;
+            border-radius: 10px;
+            font-family: monospace;
+            color: #e2e8f0;
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #334155;
+            white-space: pre;
+        }
+
+        /* Stats */
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            padding: 1.5rem;
+            border-radius: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .stat-info h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.2rem;
+        }
+        .stat-info p {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* View Managment */
+        .view-section {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        .view-section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* ... existing styles ... */
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo">
+            <i class="fas fa-microchip"></i>
+            Logic Admin
+        </div>
+        <div class="nav-item active" onclick="switchView('generator', this)">
+            <i class="fas fa-key"></i>
+            مولد السيريالات
+        </div>
+        <div class="nav-item" onclick="switchView('users', this)">
+            <i class="fas fa-users"></i>
+            المستخدمين النشطين
+        </div>
+        <div class="nav-item" onclick="switchView('stats', this)">
+            <i class="fas fa-chart-line"></i>
+            الإحصائيات
+        </div>
+        <div class="nav-item" onclick="switchView('settings', this)">
+            <i class="fas fa-cog"></i>
+            الإعدادات
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <h1 id="page-title">مولد السيريالات</h1>
+            <p id="page-desc" style="color: var(--text-muted);">إدارة وتوليد مفاتيح التفعيل للنظام</p>
+        </div>
+
+        <!-- ================= VIEW: GENERATOR ================= -->
+        <div id="view-generator" class="view-section active">
+            <!-- Generator Controls -->
+            <div class="card">
+                <h2 style="margin-bottom: 1.5rem;"><i class="fas fa-cogs"></i> إعدادات التوليد</h2>
+                
+                <div class="control-group">
+                    <div class="input-wrapper">
+                        <label>عدد المفاتيح</label>
+                        <input type="number" id="key-count" value="10" min="1" max="1000">
+                    </div>
+                    <div class="input-wrapper">
+                        <label>بادئة المفتاح (اختياري)</label>
+                        <input type="text" id="key-prefix" placeholder="مثلاً: EDU-2024-">
+                    </div>
+
+                    <div class="input-wrapper" style="width:100%">
+                        <label>مدة الصلاحية</label>
+                        <select id="key-duration" style="background:var(--input-bg); border:1px solid var(--border-color); color:white; padding:10px; border-radius:8px; width:100%">
+                            <option value="0">مدى الحياة (Lifetime)</option>
+                            <option value="30">30 يوماً</option>
+                            <option value="90">3 شهور (90 يوم)</option>
+                            <option value="180">6 شهور (180 يوم)</option>
+                            <option value="365">سنة كاملة (365 يوم)</option>
+                        </select>
+                    </div>
+                    <div class="input-wrapper">
+                        <label>نوع التنسيق</label>
+                        <select id="key-format">
+                            <option value="standard">قياسي (XXXX-XXXX-XXXX-XXXX)</option>
+                            <option value="short">قصير (XXXX-XXXX)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button onclick="generateKeys()" class="btn btn-primary">
+                    <i class="fas fa-magic"></i> بدء التوليد
+                </button>
+            </div>
+
+            <!-- Output -->
+            <div class="results-grid">
+                <!-- Plain Text Keys -->
+                <div class="card" style="margin:0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3><i class="fas fa-list"></i> قائمة المفاتيح (لك أنت)</h3>
+                        <div>
+                            <button onclick="copyKeys()" class="btn btn-secondary" style="padding: 5px 10px; font-size: 0.8rem;">نسخ</button>
+                            <button onclick="downloadKeys()" class="btn btn-success" style="padding: 5px 10px; font-size: 0.8rem;">تحميل .txt</button>
+                        </div>
+                    </div>
+                    <textarea class="terminal" id="output-keys" readonly spellcheck="false"></textarea>
+                    <p style="margin-top: 10px; font-size: 0.9rem; color: #fbbf24;">⚠️ هذه المفاتيح هي التي سترسلها للطلاب. احفظها في ملف آمن.</p>
+                </div>
+
+                <!-- Hashed Keys -->
+                <div class="card" style="margin:0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h3><i class="fas fa-code"></i> كود الحماية (للبرنامج)</h3>
+                        <button onclick="copyHashBlock()" class="btn btn-secondary" style="padding: 5px 10px; font-size: 0.8rem;">نسخ الكود</button>
+                    </div>
+                    <div class="code-block" id="output-hashes">
+                        // اضغط توليد لرؤية الكود...
+                    </div>
+                    <p style="margin-top: 10px; font-size: 0.9rem; color: #94a3b8;">هذا الكود المشفر لا يكشف السيريالات الحقيقية. انسخه وضعه في ملف <code>js/security.js</code>.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= VIEW: USERS ================= -->
+        <div id="view-users" class="view-section">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                    <h2><i class="fas fa-history"></i> سجل الأنشطة الحي</h2>
+                    <button onclick="fetchData()" class="btn btn-secondary" style="font-size: 0.8rem;"><i class="fas fa-sync"></i> تحديث</button>
+                </div>
+                <div class="table-container" style="overflow-x: auto;">
+                    <table style="width: 100%; border-collapse: collapse; text-align: right;">
+                        <thead>
+                            <tr style="border-bottom: 1px solid #334155; color: var(--text-muted);">
+                                <th style="padding: 10px;">الوقت</th>
+                                <th style="padding: 10px;">العملية</th>
+                                <th style="padding: 10px;">الجهاز</th>
+                                <th style="padding: 10px;">النظام</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-body">
+                            <tr><td colspan="4" style="text-align:center; padding: 20px; color: #666;">لا توجد بيانات (تأكد من الربط)</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= VIEW: STATS ================= -->
+        <div id="view-stats" class="view-section">
+             <!-- Stats Summary -->
+             <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="fas fa-fingerprint"></i></div>
+                    <div class="stat-info">
+                        <h3 id="stat-generated">0</h3>
+                        <p>المفاتيح المولدة</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="color: #3b82f6; background: rgba(59, 130, 246, 0.1);"><i class="fas fa-user-check"></i></div>
+                    <div class="stat-info">
+                        <h3 id="stat-activations">0</h3>
+                        <p>مستخدمين نشطين</p>
+                    </div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="color: #10b981; background: rgba(16, 185, 129, 0.1);"><i class="fas fa-sign-in-alt"></i></div>
+                    <div class="stat-info">
+                        <h3 id="stat-logins">0</h3>
+                        <p>عمليات الدخول</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Area -->
+            <div class="results-grid" style="grid-template-columns: 2fr 1fr; margin-top: 2rem;">
+                <!-- Activity Chart -->
+                <div class="card" style="margin: 0; min-height: 400px;">
+                    <h3 style="margin-bottom: 1rem; color: var(--text-muted);"><i class="fas fa-wave-square"></i> النشاط اليومي</h3>
+                    <canvas id="activityChart"></canvas>
+                </div>
+
+                <!-- OS Chart -->
+                <div class="card" style="margin: 0; min-height: 400px;">
+                    <h3 style="margin-bottom: 1rem; color: var(--text-muted);"><i class="fas fa-laptop-code"></i> أنظمة التشغيل</h3>
+                    <div style="height: 300px; display: flex; align-items: center; justify-content: center;">
+                        <canvas id="osChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= VIEW: SETTINGS ================= -->
+        <div id="view-settings" class="view-section">
+            <div class="card">
+                <h2 style="margin-bottom: 1.5rem;"><i class="fas fa-link"></i> إعدادات الربط</h2>
+                <div class="control-group">
+                    <div class="input-wrapper" style="width: 100%;">
+                        <label>Google Script URL</label>
+                        <input type="text" id="api-url" placeholder="https://script.google.com/macros/s/..../exec" style="margin-bottom: 1rem;">
+                        <p style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;">
+                            هذا الرابط هو حلقة الوصل بين البرنامج ولوحة التحكم. تأكد من أن السكربت منشور بصلاحية Anyone.
+                        </p>
+                        <button onclick="saveConfig()" class="btn btn-primary">حفظ وتحديث الاتصال</button>
+                    </div>
+                </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 style="margin-bottom: 1.5rem;"><i class="fas fa-bullhorn" style="color: #f59e0b;"></i> الإشعارات العامة</h2>
+                <div class="control-group">
+                    <div class="input-wrapper" style="width: 100%;">
+                        <label>رسالة التنبيه</label>
+                        <textarea id="broadcast-message" rows="3" placeholder="اكتب هنا رسالة ستظهر لكل المستخدمين عند فتح البرنامج..." style="width: 100%; background: var(--input-bg); border: 1px solid var(--border-color); color: white; padding: 10px; border-radius: 8px; margin-bottom: 1rem;"></textarea>
+                        
+                        <div style="display: flex; gap: 1rem;">
+                            <button onclick="sendBroadcast()" class="btn" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white;">
+                                <i class="fas fa-paper-plane"></i> إرسال للكل
+                            </button>
+                            <button onclick="document.getElementById('broadcast-message').value=''; sendBroadcast()" class="btn" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.5);">
+                                <i class="fas fa-trash-alt"></i> مسح
+                            </button>
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 1rem;">
+                            * الرسالة ستظهر مرة واحدة لكل مستخدم. لمسح الرسالة الحالية، اترك الحقل فارغاً واضغط "إرسال".
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="border: 1px solid #ef4444;">
+                <h2 style="margin-bottom: 1.5rem; color: #ef4444;"><i class="fas fa-ban"></i> منطقة الخطر (إيقاف النظام)</h2>
+                <div class="control-group">
+                    <div style="width: 100%;">
+                        <p style="color: var(--text-muted); margin-bottom: 1rem;">
+                            يمكنك تفعيل وضع الصيانة لإيقاف البرنامج عند جميع المستخدمين فوراً. لن يتمكن أحد من فتح التطبيق حتى تقوم بتعطيل هذا الوضع.
+                        </p>
+                        
+                        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; background: rgba(239, 68, 68, 0.1); padding: 1rem; border-radius: 8px;">
+                            <label class="switch">
+                                <input type="checkbox" id="maintenance-toggle">
+                                <span class="slider round"></span>
+                            </label>
+                            <span style="font-weight: bold; color:white;">تفعيل وضع الصيانة</span>
+                        </div>
+
+                        <label>رسالة الصيانة التي ستظهر للمستخدمين</label>
+                        <input type="text" id="maintenance-msg" value="عذراً، النظام متوقف حالياً للصيانة والتحديث. يرجى المحاولة لاحقاً." 
+                               style="width: 100%; background: var(--input-bg); border: 1px solid var(--border-color); color: white; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">
+                        
+                        <button onclick="saveMaintenance()" class="btn" style="background: #ef4444; color: white;">
+                            <i class="fas fa-save"></i> حفظ الإعدادات
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 style="margin-bottom: 1.5rem;"><i class="fas fa-info-circle"></i> عن النظام</h2>
+                <p style="color: var(--text-muted);">نظام Logic Admin إصدار 1.0.0</p>
+                <p style="color: var(--text-muted); margin-top: 0.5rem;">تم التطوير بواسطة: Silver Bullet</p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Logic -->
+    <script>
+        // === View Switching ===
+        function switchView(viewName, element) {
+            // Update Sidebar
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+
+            // Update Main Content
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.getElementById('view-' + viewName).classList.add('active');
+
+            // Update Header
+            const titles = {
+                'generator': 'مولد السيريالات',
+                'users': 'المستخدمين النشطين',
+                'stats': 'الإحصائيات العامة',
+                'settings': 'إعدادات النظام'
+            };
+            const descs = {
+                'generator': 'إدارة وتوليد مفاتيح التفعيل للنظام',
+                'users': 'متابعة سجلات الدخول والتفعيل في الوقت الحقيقي',
+                'stats': 'نظرة عامة على أداء النظام والمستخدمين',
+                'settings': 'تهيئة الاتصال بالسيرفر وإعدادات التطبيق'
+            };
+
+            document.getElementById('page-title').textContent = titles[viewName];
+            document.getElementById('page-desc').textContent = descs[viewName];
+
+            // If switching to stats or users, fetch fresh data
+            if(viewName === 'stats' || viewName === 'users') {
+                fetchData();
+            }
+        }
+
+        async function sha256(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function generateRandomSegment() {
+            return Math.random().toString(36).substr(2, 4).toUpperCase();
+        }
+
+        let generatedKeysCache = [];
+
+
+
+        // === Logic: Key Generation ===
+        async function generateKeys() {
+            const count = parseInt(document.getElementById('key-count').value) || 10;
+            const prefix = document.getElementById('key-prefix').value.trim().toUpperCase();
+            const days = document.getElementById('key-duration').value;
+            const format = document.getElementById('key-format').value;
+            
+            const keysDisplay = document.getElementById('output-keys');
+            const hashesDisplay = document.getElementById('output-hashes');
+            const statGenerated = document.getElementById('stat-generated');
+            const btn = document.querySelector('button[onclick="generateKeys()"]');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التوليد...';
+
+            // 1. Generate Locally (المفاتيح تتولد محلياً الآن لضمان الفعالية)
+            generatedKeysCache = [];
+            for(let i=0; i<count; i++) {
+                let key = '';
+                if (format === 'standard') {
+                    key = `${randHex(4)}-${randHex(4)}-${randHex(4)}-${randHex(4)}`;
+                } else if (format === 'short') {
+                    key = `${randHex(4)}-${randHex(4)}`;
+                } else {
+                    key = `${randHex(4)}${randHex(4)}`;
+                }
+                if(prefix) key = `${prefix}-${key}`;
+                generatedKeysCache.push(key.toUpperCase());
+            }
+
+            // 2. Display Keys immediatly
+            keysDisplay.value = generatedKeysCache.join('\n');
+            statGenerated.textContent = generatedKeysCache.length;
+
+            // 3. Generate Hashes for Security File
+            generateHashesForDisplay(generatedKeysCache, days);
+
+            // 4. Try to save to Google Sheet (Backup / Logging only)
+            const url = document.getElementById('api-url').value.trim();
+            if (url) {
+                try {
+                    // Send to server just for storage (don't wait for keys back)
+                    fetch(url, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ 
+                            action: 'LOG_KEYS', // New action we might add to script, or just use GENERATE but ignore return
+                            keys: generatedKeysCache, // We need to update script to accept 'keys' payload if we want to save specific ones
+                            days: days,
+                            notes: 'Generated locally via Dashboard'
+                        })
+                    }).catch(err => console.log('Background save failed', err));
+                    
+                    // Note: We are ignoring server response to avoid "Empty" issues. 
+                    // We trust logic here.
+                } catch(e) {
+                    console.log('Server save error', e);
+                }
+            }
+
+            btn.innerHTML = '<i class="fas fa-magic"></i> تم التوليد';
+            setTimeout(() => { btn.innerHTML = '<i class="fas fa-magic"></i> بدء التوليد'; btn.disabled = false; }, 1000);
+        }
+
+        function randHex(len) {
+            return Math.random().toString(36).substring(2, 2+len);
+        }
+
+        async function generateHashesForDisplay(keys, days) {
+            const hashesDisplay = document.getElementById('output-hashes');
+            let hashOutput = `// --- انسخ هذا الكود وضعه في js/security.js ---\n`;
+            hashOutput += `// تاريخ التوليد: ${new Date().toLocaleString()}\n`;
+            hashOutput += `const OFFLINE_HASHES = [\n`;
+            
+            const hashPromises = keys.map(k => sha256(k));
+            const hashes = await Promise.all(hashPromises);
+            
+            hashes.forEach(h => {
+                hashOutput += `    "${h}", // ${days === '0' ? 'Lifetime' : days + 'd'}\n`;
+            });
+            
+            hashOutput += `];\n// ---------------------------------------------`;
+            hashesDisplay.textContent = hashOutput;
+        }
+
+        function downloadKeys() {
+            if (generatedKeysCache.length === 0) {
+                alert('لا توجد مفاتيح لتحميلها!');
+                return;
+            }
+            
+            const dateStr = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            const content = [];
+            
+            content.push("==================================================");
+            content.push(`LOGIC SIMULATOR PRO - LICENSE KEYS`);
+            content.push(`Created: ${new Date().toLocaleString()}`);
+            content.push("==================================================\n");
+            
+            content.push("[ KEYS FOR USERS ]");
+            content.push(generatedKeysCache.join('\n'));
+            
+            content.push("\n\n==================================================");
+            content.push("[ SECURITY CODE (For js/security.js) ]");
+            content.push("Copy the code below to your security.js file:");
+            content.push("==================================================\n");
+            
+            const hashCode = document.getElementById('output-hashes').textContent;
+            content.push(hashCode);
+            
+            const element = document.createElement('a');
+            const file = new Blob([content.join('\n')], {type: 'text/plain'});
+            element.href = URL.createObjectURL(file);
+            element.download = `License_Keys_${dateStr}.txt`;
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+        }
+
+        function copyKeys() {
+            const el = document.getElementById('output-keys');
+            el.select();
+            document.execCommand('copy');
+            alert('تم نسخ قائمة المفاتيح');
+        }
+
+        function copyHashBlock() {
+            const text = document.getElementById('output-hashes').textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                alert('تم نسخ كود الهاش. الصقه في ملف js/security.js');
+            });
+        }
+
+        function downloadKeys() {
+            if (generatedKeysCache.length === 0) {
+                alert('لا توجد مفاتيح لتحميلها!');
+                return;
+            }
+            
+            const element = document.createElement('a');
+            const file = new Blob([generatedKeysCache.join('\n')], {type: 'text/plain'});
+            element.href = URL.createObjectURL(file);
+            element.download = "licenses.txt";
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
+        }
+
+        // === API Integration ===
+        
+        // Load saved URL
+        const savedUrl = localStorage.getItem('logic_admin_api_url');
+        if (savedUrl) {
+            document.getElementById('api-url').value = savedUrl;
+            fetchData();
+        }
+
+        function saveConfig() {
+            const url = document.getElementById('api-url').value.trim();
+            if (url) {
+                localStorage.setItem('logic_admin_api_url', url);
+                alert('تم الحفظ!');
+                fetchData();
+            } else {
+                alert('الرجاء إدخال الرابط');
+            }
+        }
+
+        // --- 3. إرسال إشعار للمستخدمين ---
+        async function sendBroadcast() {
+            const message = document.getElementById('broadcast-message').value.trim();
+            const btn = document.querySelector('button[onclick="sendBroadcast()"]');
+            const originalText = btn.innerHTML;
+            
+            if(!message && !confirm('هل تريد مسح الرسالة الحالية؟')) return;
+
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارِ الإرسال...';
+            btn.disabled = true;
+
+            const url = document.getElementById('api-url').value.trim();
+            
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ 
+                        action: 'SET_BROADCAST', 
+                        message: message 
+                    })
+                });
+
+                alert('تم تحديث الرسالة بنجاح! قد يستغرق الأمر بضع دقائق لتظهر للمستخدمين.');
+            } catch (err) {
+                console.error(err);
+                alert('حدث خطأ أثناء الإرسال.');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // --- 4. إعدادات وضع الصيانة ---
+        async function saveMaintenance() {
+            const enabled = document.getElementById('maintenance-toggle').checked;
+            const message = document.getElementById('maintenance-msg').value.trim();
+            const btn = document.querySelector('button[onclick="saveMaintenance()"]');
+            const originalText = btn.innerHTML;
+
+            if (enabled && !confirm('تحذير: أنت على وشك إيقاف النظام لجميع المستخدمين! هل أنت متأكد؟')) {
+                document.getElementById('maintenance-toggle').checked = false;
+                return;
+            }
+
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارِ الحفظ...';
+            btn.disabled = true;
+
+            const url = document.getElementById('api-url').value.trim();
+            
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ 
+                        action: 'SET_MAINTENANCE', 
+                        enabled: enabled,
+                        message: message 
+                    })
+                });
+
+                alert('تم تحديث حالة الصيانة بنجاح!');
+            } catch (err) {
+                console.error(err);
+                alert('حدث خطأ أثناء الاتصال بالسيرفر.');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // === Chart.js Configuration ===
+        let activityChartInstance = null;
+        let osChartInstance = null;
+
+        function renderCharts(data) {
+            // 1. Prepare Data for Activity Chart (Last 7 Days)
+            const dailyData = data.daily_activity || {};
+            const dates = Object.keys(dailyData).slice(-7); // Last 7 days
+            const counts = dates.map(d => dailyData[d]);
+
+            const ctxActivity = document.getElementById('activityChart').getContext('2d');
+            
+            if (activityChartInstance) activityChartInstance.destroy();
+
+            activityChartInstance = new Chart(ctxActivity, {
+                type: 'line',
+                data: {
+                    labels: dates,
+                    datasets: [{
+                        label: 'عدد العمليات',
+                        data: counts,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                        tension: 0.4,
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { 
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: '#334155' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            // 2. Prepare Data for OS Chart
+            const osData = data.os_stats || {};
+            const osLabels = Object.keys(osData);
+            const osCounts = Object.values(osData);
+
+            const ctxOS = document.getElementById('osChart').getContext('2d');
+            
+            if (osChartInstance) osChartInstance.destroy();
+
+            osChartInstance = new Chart(ctxOS, {
+                type: 'doughnut',
+                data: {
+                    labels: osLabels,
+                    datasets: [{
+                        data: osCounts,
+                        backgroundColor: [
+                            '#6366f1', '#ec4899', '#10b981', '#f59e0b', '#3b82f6'
+                        ],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { color: '#94a3b8' } }
+                    }
+                }
+            });
+        }
+
+        async function fetchData() {
+            const url = document.getElementById('api-url').value.trim();
+            if (!url) return;
+
+            // Only show spinner if button exists in current view
+            const btn = document.querySelector('.active button[onclick="fetchData()"]');
+            if(btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> تحديث...';
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                // Update Stats (everywhere)
+                const actEl = document.getElementById('stat-activations');
+                if(actEl) actEl.textContent = data.active_users || 0;
+                
+                const logEl = document.getElementById('stat-logins');
+                if(logEl) logEl.textContent = data.total_logins || 0;
+
+                // Render Charts (New Feature)
+                if (data.daily_activity && data.os_stats) {
+                    renderCharts(data);
+                }
+
+                // Update Logs
+                const tbody = document.getElementById('logs-body');
+                if(tbody) {
+                    tbody.innerHTML = '';
+                    
+                    if (data.recent_logs && data.recent_logs.length > 0) {
+                        data.recent_logs.forEach(log => {
+                            const date = new Date(log.timestamp).toLocaleString('ar-SA');
+                            const typeClass = log.type === 'ACTIVATE' ? 'color: #10b981' : 'color: #3b82f6';
+                            const typeText = log.type === 'ACTIVATE' ? 'تفعيل جديد' : 'تسجيل دخول';
+                            
+                            const row = `
+                                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                    <td style="padding: 12px;">${date}</td>
+                                    <td style="padding: 12px; font-weight:bold; ${typeClass}">${typeText}</td>
+                                    <td style="padding: 12px;">${log.device}</td>
+                                    <td style="padding: 12px; color: #94a3b8;">${log.os}</td>
+                                </tr>
+                            `;
+                            tbody.innerHTML += row;
+                        });
+                    } else {
+                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding: 20px;">لا توجد سجلات حديثة</td></tr>';
+                    }
+                }
+
+            } catch (err) {
+                console.error(err);
+                // Don't alert on auto-fetch to avoid annoyance
+                // alert('فشل الاتصال بالسيرفر. تأكد من الرابط وصحة النشر (Anyone can access)');
+            } finally {
+                if(btn) btn.innerHTML = '<i class="fas fa-sync"></i> تحديث';
+            }
+        }
+    </script>
+</body>
+</html>
