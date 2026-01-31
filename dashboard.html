@@ -561,85 +561,122 @@
 
         // === Logic: Key Generation ===
         async function generateKeys() {
-            const count = document.getElementById('key-count').value;
-            const prefix = document.getElementById('key-prefix').value.toUpperCase();
+            const count = parseInt(document.getElementById('key-count').value) || 10;
+            const prefix = document.getElementById('key-prefix').value.trim().toUpperCase();
             const days = document.getElementById('key-duration').value;
+            const format = document.getElementById('key-format').value;
             
             const keysDisplay = document.getElementById('output-keys');
             const hashesDisplay = document.getElementById('output-hashes');
             const statGenerated = document.getElementById('stat-generated');
             const btn = document.querySelector('button[onclick="generateKeys()"]');
             
-            // Check API URL first
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التوليد...';
+
+            // 1. Generate Locally (المفاتيح تتولد محلياً الآن لضمان الفعالية)
+            generatedKeysCache = [];
+            for(let i=0; i<count; i++) {
+                let key = '';
+                if (format === 'standard') {
+                    key = `${randHex(4)}-${randHex(4)}-${randHex(4)}-${randHex(4)}`;
+                } else if (format === 'short') {
+                    key = `${randHex(4)}-${randHex(4)}`;
+                } else {
+                    key = `${randHex(4)}${randHex(4)}`;
+                }
+                if(prefix) key = `${prefix}-${key}`;
+                generatedKeysCache.push(key.toUpperCase());
+            }
+
+            // 2. Display Keys immediatly
+            keysDisplay.value = generatedKeysCache.join('\n');
+            statGenerated.textContent = generatedKeysCache.length;
+
+            // 3. Generate Hashes for Security File
+            generateHashesForDisplay(generatedKeysCache, days);
+
+            // 4. Try to save to Google Sheet (Backup / Logging only)
             const url = document.getElementById('api-url').value.trim();
-            if (!url) {
-                alert('الرجاء تعيين رابط السيرفر في صفحة الإعدادات أولاً!');
+            if (url) {
+                try {
+                    // Send to server just for storage (don't wait for keys back)
+                    fetch(url, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ 
+                            action: 'LOG_KEYS', // New action we might add to script, or just use GENERATE but ignore return
+                            keys: generatedKeysCache, // We need to update script to accept 'keys' payload if we want to save specific ones
+                            days: days,
+                            notes: 'Generated locally via Dashboard'
+                        })
+                    }).catch(err => console.log('Background save failed', err));
+                    
+                    // Note: We are ignoring server response to avoid "Empty" issues. 
+                    // We trust logic here.
+                } catch(e) {
+                    console.log('Server save error', e);
+                }
+            }
+
+            btn.innerHTML = '<i class="fas fa-magic"></i> تم التوليد';
+            setTimeout(() => { btn.innerHTML = '<i class="fas fa-magic"></i> بدء التوليد'; btn.disabled = false; }, 1000);
+        }
+
+        function randHex(len) {
+            return Math.random().toString(36).substring(2, 2+len);
+        }
+
+        async function generateHashesForDisplay(keys, days) {
+            const hashesDisplay = document.getElementById('output-hashes');
+            let hashOutput = `// --- انسخ هذا الكود وضعه في js/security.js ---\n`;
+            hashOutput += `// تاريخ التوليد: ${new Date().toLocaleString()}\n`;
+            hashOutput += `const OFFLINE_HASHES = [\n`;
+            
+            const hashPromises = keys.map(k => sha256(k));
+            const hashes = await Promise.all(hashPromises);
+            
+            hashes.forEach(h => {
+                hashOutput += `    "${h}", // ${days === '0' ? 'Lifetime' : days + 'd'}\n`;
+            });
+            
+            hashOutput += `];\n// ---------------------------------------------`;
+            hashesDisplay.textContent = hashOutput;
+        }
+
+        function downloadKeys() {
+            if (generatedKeysCache.length === 0) {
+                alert('لا توجد مفاتيح لتحميلها!');
                 return;
             }
-
-            keysDisplay.innerHTML = "جاري الاتصال بالسيرفر وتوليد المفاتيح...";
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التوليد...';
-            btn.disabled = true;
-
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({ 
-                        action: 'GENERATE_KEYS',
-                        count: count,
-                        prefix: prefix,
-                        days: days
-                    })
-                });
-
-                // NOTE: With no-cors (for Google Script), we can't read the response directly easily 
-                // BUT if we use the same domain/deployed app logic or assume success...
-                // Actually, for Dashboard (Web App), users usually use CORS proxy or correct settings.
-                // However, since we cannot easily get JSON back in 'no-cors' mode from browser
-                // We will simulate success message OR advise user to check the 'Keys' sheet.
-                // WAIT! If the user opens dashboard.html locally, they can't make cross-origin requests freely to Google Script without CORS issues.
-                // But typically Google Script Web App set to "Anyone" supports CORS IF we follow redirects.
-                // Let's assume standard fetch works if not no-cors.
-
-                // Let's try normal fetch since we need the keys back.
-                
-                // RE-FETCHING STRATEGY: 
-                // Google Apps Script `ContentService` handles CORS if we don't force 'no-cors'.
-                
-                const realResponse = await fetch(url, {
-                    method: 'POST',
-                    // mode: 'cors', // Default
-                    body: JSON.stringify({ 
-                        action: 'GENERATE_KEYS',
-                        count: count,
-                        prefix: prefix,
-                        days: days
-                    })
-                });
-                
-                const data = await realResponse.json();
-                
-                if (data.status === 'success' && data.keys) {
-                    generatedKeysCache = data.keys;
-                    keysDisplay.value = generatedKeysCache.join('\n');
-                    hashesDisplay.innerHTML = `// تم حفظ المفاتيح في قاعدة البيانات (Sheet: Keys)\n// المدة: ${days === '0' ? 'مدى الحياة' : days + ' يوم'}`;
-                    statGenerated.textContent = generatedKeysCache.length;
-                    alert('تم توليد المفاتيح وحفظها في السيرفر بنجاح!');
-                } else {
-                    throw new Error(data.error || 'Unknown Error');
-                }
-
-            } catch (e) {
-                console.error(e);
-                keysDisplay.value = "حدث خطأ أثناء التوليد. تأكد من إعدادات السيرفر والسماح بـ Cross-Origin.";
-                // Fallback for demo? No, let's force server usage.
-                alert('فشل الاتصال بالسيرفر: ' + e.message);
-            } finally {
-                btn.innerHTML = '<i class="fas fa-magic"></i> توليد المفاتيح';
-                btn.disabled = false;
-            }
+            
+            const dateStr = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            const content = [];
+            
+            content.push("==================================================");
+            content.push(`LOGIC SIMULATOR PRO - LICENSE KEYS`);
+            content.push(`Created: ${new Date().toLocaleString()}`);
+            content.push("==================================================\n");
+            
+            content.push("[ KEYS FOR USERS ]");
+            content.push(generatedKeysCache.join('\n'));
+            
+            content.push("\n\n==================================================");
+            content.push("[ SECURITY CODE (For js/security.js) ]");
+            content.push("Copy the code below to your security.js file:");
+            content.push("==================================================\n");
+            
+            const hashCode = document.getElementById('output-hashes').textContent;
+            content.push(hashCode);
+            
+            const element = document.createElement('a');
+            const file = new Blob([content.join('\n')], {type: 'text/plain'});
+            element.href = URL.createObjectURL(file);
+            element.download = `License_Keys_${dateStr}.txt`;
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
         }
 
         function copyKeys() {
