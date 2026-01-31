@@ -310,6 +310,17 @@
                         <label>بادئة المفتاح (اختياري)</label>
                         <input type="text" id="key-prefix" placeholder="مثلاً: EDU-2024-">
                     </div>
+
+                    <div class="input-wrapper" style="width:100%">
+                        <label>مدة الصلاحية</label>
+                        <select id="key-duration" style="background:var(--input-bg); border:1px solid var(--border-color); color:white; padding:10px; border-radius:8px; width:100%">
+                            <option value="0">مدى الحياة (Lifetime)</option>
+                            <option value="30">30 يوماً</option>
+                            <option value="90">3 شهور (90 يوم)</option>
+                            <option value="180">6 شهور (180 يوم)</option>
+                            <option value="365">سنة كاملة (365 يوم)</option>
+                        </select>
+                    </div>
                     <div class="input-wrapper">
                         <label>نوع التنسيق</label>
                         <select id="key-format">
@@ -437,6 +448,56 @@
                         <button onclick="saveConfig()" class="btn btn-primary">حفظ وتحديث الاتصال</button>
                     </div>
                 </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2 style="margin-bottom: 1.5rem;"><i class="fas fa-bullhorn" style="color: #f59e0b;"></i> الإشعارات العامة</h2>
+                <div class="control-group">
+                    <div class="input-wrapper" style="width: 100%;">
+                        <label>رسالة التنبيه</label>
+                        <textarea id="broadcast-message" rows="3" placeholder="اكتب هنا رسالة ستظهر لكل المستخدمين عند فتح البرنامج..." style="width: 100%; background: var(--input-bg); border: 1px solid var(--border-color); color: white; padding: 10px; border-radius: 8px; margin-bottom: 1rem;"></textarea>
+                        
+                        <div style="display: flex; gap: 1rem;">
+                            <button onclick="sendBroadcast()" class="btn" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: white;">
+                                <i class="fas fa-paper-plane"></i> إرسال للكل
+                            </button>
+                            <button onclick="document.getElementById('broadcast-message').value=''; sendBroadcast()" class="btn" style="background: rgba(239, 68, 68, 0.1); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.5);">
+                                <i class="fas fa-trash-alt"></i> مسح
+                            </button>
+                        </div>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 1rem;">
+                            * الرسالة ستظهر مرة واحدة لكل مستخدم. لمسح الرسالة الحالية، اترك الحقل فارغاً واضغط "إرسال".
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card" style="border: 1px solid #ef4444;">
+                <h2 style="margin-bottom: 1.5rem; color: #ef4444;"><i class="fas fa-ban"></i> منطقة الخطر (إيقاف النظام)</h2>
+                <div class="control-group">
+                    <div style="width: 100%;">
+                        <p style="color: var(--text-muted); margin-bottom: 1rem;">
+                            يمكنك تفعيل وضع الصيانة لإيقاف البرنامج عند جميع المستخدمين فوراً. لن يتمكن أحد من فتح التطبيق حتى تقوم بتعطيل هذا الوضع.
+                        </p>
+                        
+                        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; background: rgba(239, 68, 68, 0.1); padding: 1rem; border-radius: 8px;">
+                            <label class="switch">
+                                <input type="checkbox" id="maintenance-toggle">
+                                <span class="slider round"></span>
+                            </label>
+                            <span style="font-weight: bold; color:white;">تفعيل وضع الصيانة</span>
+                        </div>
+
+                        <label>رسالة الصيانة التي ستظهر للمستخدمين</label>
+                        <input type="text" id="maintenance-msg" value="عذراً، النظام متوقف حالياً للصيانة والتحديث. يرجى المحاولة لاحقاً." 
+                               style="width: 100%; background: var(--input-bg); border: 1px solid var(--border-color); color: white; padding: 10px; border-radius: 8px; margin-bottom: 1rem;">
+                        
+                        <button onclick="saveMaintenance()" class="btn" style="background: #ef4444; color: white;">
+                            <i class="fas fa-save"></i> حفظ الإعدادات
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <div class="card">
@@ -496,42 +557,126 @@
 
         let generatedKeysCache = [];
 
+
+
+        // === Logic: Key Generation ===
         async function generateKeys() {
-            const count = document.getElementById('key-count').value;
-            const prefix = document.getElementById('key-prefix').value.toUpperCase();
+            const count = parseInt(document.getElementById('key-count').value) || 10;
+            const prefix = document.getElementById('key-prefix').value.trim().toUpperCase();
+            const days = document.getElementById('key-duration').value;
             const format = document.getElementById('key-format').value;
             
             const keysDisplay = document.getElementById('output-keys');
             const hashesDisplay = document.getElementById('output-hashes');
             const statGenerated = document.getElementById('stat-generated');
+            const btn = document.querySelector('button[onclick="generateKeys()"]');
+            
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التوليد...';
 
-            keysDisplay.innerHTML = "جاري التوليد...";
-            hashesDisplay.innerHTML = "// جارٍ التشفير...";
-
+            // 1. Generate Locally (المفاتيح تتولد محلياً الآن لضمان الفعالية)
             generatedKeysCache = [];
-            let hashes = [];
-
-            for (let i = 0; i < count; i++) {
-                let key = "";
-                
-                if (prefix) key += prefix;
-
+            for(let i=0; i<count; i++) {
+                let key = '';
                 if (format === 'standard') {
-                    key += `${generateRandomSegment()}-${generateRandomSegment()}-${generateRandomSegment()}-${generateRandomSegment()}`;
+                    key = `${randHex(4)}-${randHex(4)}-${randHex(4)}-${randHex(4)}`;
+                } else if (format === 'short') {
+                    key = `${randHex(4)}-${randHex(4)}`;
                 } else {
-                    key += `${generateRandomSegment()}-${generateRandomSegment()}`;
+                    key = `${randHex(4)}${randHex(4)}`;
                 }
-                
-                generatedKeysCache.push(key);
-                hashes.push(await sha256(key));
+                if(prefix) key = `${prefix}-${key}`;
+                generatedKeysCache.push(key.toUpperCase());
             }
 
-            // Update UI
+            // 2. Display Keys immediatly
             keysDisplay.value = generatedKeysCache.join('\n');
-            
-            hashesDisplay.textContent = `const VALID_HASHES = ${JSON.stringify(hashes, null, 2)};`;
+            statGenerated.textContent = generatedKeysCache.length;
 
-            statGenerated.textContent = generatedKeysCache.length; // Just showing current batch count for now
+            // 3. Generate Hashes for Security File
+            generateHashesForDisplay(generatedKeysCache, days);
+
+            // 4. Try to save to Google Sheet (Backup / Logging only)
+            const url = document.getElementById('api-url').value.trim();
+            if (url) {
+                try {
+                    // Send to server just for storage (don't wait for keys back)
+                    fetch(url, {
+                        method: 'POST',
+                        mode: 'no-cors',
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify({ 
+                            action: 'LOG_KEYS', // New action we might add to script, or just use GENERATE but ignore return
+                            keys: generatedKeysCache, // We need to update script to accept 'keys' payload if we want to save specific ones
+                            days: days,
+                            notes: 'Generated locally via Dashboard'
+                        })
+                    }).catch(err => console.log('Background save failed', err));
+                    
+                    // Note: We are ignoring server response to avoid "Empty" issues. 
+                    // We trust logic here.
+                } catch(e) {
+                    console.log('Server save error', e);
+                }
+            }
+
+            btn.innerHTML = '<i class="fas fa-magic"></i> تم التوليد';
+            setTimeout(() => { btn.innerHTML = '<i class="fas fa-magic"></i> بدء التوليد'; btn.disabled = false; }, 1000);
+        }
+
+        function randHex(len) {
+            return Math.random().toString(36).substring(2, 2+len);
+        }
+
+        async function generateHashesForDisplay(keys, days) {
+            const hashesDisplay = document.getElementById('output-hashes');
+            let hashOutput = `// --- انسخ هذا الكود وضعه في js/security.js ---\n`;
+            hashOutput += `// تاريخ التوليد: ${new Date().toLocaleString()}\n`;
+            hashOutput += `const OFFLINE_HASHES = [\n`;
+            
+            const hashPromises = keys.map(k => sha256(k));
+            const hashes = await Promise.all(hashPromises);
+            
+            hashes.forEach(h => {
+                hashOutput += `    "${h}", // ${days === '0' ? 'Lifetime' : days + 'd'}\n`;
+            });
+            
+            hashOutput += `];\n// ---------------------------------------------`;
+            hashesDisplay.textContent = hashOutput;
+        }
+
+        function downloadKeys() {
+            if (generatedKeysCache.length === 0) {
+                alert('لا توجد مفاتيح لتحميلها!');
+                return;
+            }
+            
+            const dateStr = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            const content = [];
+            
+            content.push("==================================================");
+            content.push(`LOGIC SIMULATOR PRO - LICENSE KEYS`);
+            content.push(`Created: ${new Date().toLocaleString()}`);
+            content.push("==================================================\n");
+            
+            content.push("[ KEYS FOR USERS ]");
+            content.push(generatedKeysCache.join('\n'));
+            
+            content.push("\n\n==================================================");
+            content.push("[ SECURITY CODE (For js/security.js) ]");
+            content.push("Copy the code below to your security.js file:");
+            content.push("==================================================\n");
+            
+            const hashCode = document.getElementById('output-hashes').textContent;
+            content.push(hashCode);
+            
+            const element = document.createElement('a');
+            const file = new Blob([content.join('\n')], {type: 'text/plain'});
+            element.href = URL.createObjectURL(file);
+            element.download = `License_Keys_${dateStr}.txt`;
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
         }
 
         function copyKeys() {
@@ -580,6 +725,79 @@
                 fetchData();
             } else {
                 alert('الرجاء إدخال الرابط');
+            }
+        }
+
+        // --- 3. إرسال إشعار للمستخدمين ---
+        async function sendBroadcast() {
+            const message = document.getElementById('broadcast-message').value.trim();
+            const btn = document.querySelector('button[onclick="sendBroadcast()"]');
+            const originalText = btn.innerHTML;
+            
+            if(!message && !confirm('هل تريد مسح الرسالة الحالية؟')) return;
+
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارِ الإرسال...';
+            btn.disabled = true;
+
+            const url = document.getElementById('api-url').value.trim();
+            
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ 
+                        action: 'SET_BROADCAST', 
+                        message: message 
+                    })
+                });
+
+                alert('تم تحديث الرسالة بنجاح! قد يستغرق الأمر بضع دقائق لتظهر للمستخدمين.');
+            } catch (err) {
+                console.error(err);
+                alert('حدث خطأ أثناء الإرسال.');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        }
+
+        // --- 4. إعدادات وضع الصيانة ---
+        async function saveMaintenance() {
+            const enabled = document.getElementById('maintenance-toggle').checked;
+            const message = document.getElementById('maintenance-msg').value.trim();
+            const btn = document.querySelector('button[onclick="saveMaintenance()"]');
+            const originalText = btn.innerHTML;
+
+            if (enabled && !confirm('تحذير: أنت على وشك إيقاف النظام لجميع المستخدمين! هل أنت متأكد؟')) {
+                document.getElementById('maintenance-toggle').checked = false;
+                return;
+            }
+
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جارِ الحفظ...';
+            btn.disabled = true;
+
+            const url = document.getElementById('api-url').value.trim();
+            
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({ 
+                        action: 'SET_MAINTENANCE', 
+                        enabled: enabled,
+                        message: message 
+                    })
+                });
+
+                alert('تم تحديث حالة الصيانة بنجاح!');
+            } catch (err) {
+                console.error(err);
+                alert('حدث خطأ أثناء الاتصال بالسيرفر.');
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
             }
         }
 
