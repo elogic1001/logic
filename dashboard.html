@@ -904,11 +904,15 @@
                             const date = new Date(log.timestamp).toLocaleString('ar-SA');
                             const typeClass = log.type === 'ACTIVATE' ? 'color: #10b981' : 'color: #3b82f6';
                             const typeText = log.type === 'ACTIVATE' ? 'تفعيل جديد' : 'تسجيل دخول';
-                            
+                            const envIcon = log.env === 'EXE' ? '<i class="fas fa-desktop" title="برنامج سطح المكتب (EXE)"></i>' : '<i class="fas fa-globe" title="نسخة الويب (Online)"></i>';
+                                    
                             const row = `
                                 <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
                                     <td style="padding: 12px;">${date}</td>
-                                    <td style="padding: 12px; font-weight:bold; ${typeClass}">${typeText}</td>
+                                    <td style="padding: 12px; font-weight:bold; ${typeClass}">
+                                        ${typeText} 
+                                        <span style="margin-right:8px; font-size:0.9rem; color:#cbd5e1">${envIcon}</span>
+                                    </td>
                                     <td style="padding: 12px;">${log.device}</td>
                                     <td style="padding: 12px; color: #94a3b8;">${log.os}</td>
                                 </tr>
